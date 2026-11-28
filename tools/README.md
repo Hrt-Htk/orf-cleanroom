@@ -1,5 +1,13 @@
 # tools
 
+**`literal_repeat_heldout.py`** extends independent #864 reproduction with the
+same frozen white-derived template on public PA200011 and two 128-KiB white
+windows starting at 1/2 MiB. The comparator is never fitted; original literal
+cost functions and absolute phase are reused. These are description costs,
+not camera syntax. Both public inputs are hash-gated against pinned identities.
+
+    python -I -B tools/literal_repeat_heldout.py --white PATH_WHITE --dark PATH_PA200011
+
 **`literal_repeat_probe.py`** fits 1..256-bit periodic majority templates on a
 fixed white-file window and charges the self-contained gamma-gap exception
 description on fixed disjoint windows, the whole strip and a dark comparator.
@@ -1982,6 +1990,20 @@ Every supplied file is checked against its full retained SHA-256.
     python -I -B tools/makernote_prefix_audit.py --records samples/makernote-prefix-949-records.json --sample 7264 FILE7264 --sample 7798 FILE7798
     python -I -B tools/test_makernote_prefix_audit.py
 
+### Six-field group versus literal border metadata
+
+`row_group_border_inventory.py` supports the remaining #951 comparison with
+IP 0x0612. It reuses #950's first-400-row pattern/longest-chain selection and
+nominal-width candidate columns, and inventories literal IP 0x0611..0x0615
+with the bounded MakerNote reader. Compare scalar 0x0612 directly, retaining
+unaligned heads, absent/vector/unsupported fields and all mismatches. No
+coordinate convention, physical border or tag meaning is inferred; no offset
+or scale is fitted. The reader's optional requested-path argument leaves the
+original #949 default unchanged.
+
+    python -I -B tools/row_group_border_inventory.py --records samples/om3-flat-338-provenance.json --sample PA200010.ORF FILE
+    python -I -B tools/test_row_group_border_inventory.py
+
 ### Fixed capped-prefix count scope
 
 `capped_prefix_counts.py` supports #951 verification with a separate bounded
@@ -1999,6 +2021,19 @@ land exactly at the assumed pitch without any camera input.
     python -I -B tools/capped_prefix_counts.py --records samples/om3-flat-338-provenance.json --sample PA200012.ORF FILE
     python -I -B tools/capped_prefix_counts.py --records samples/e-m5-mk-ii-dark-338-provenance.json --sample P1010017.ORF FILE
     python -I -B tools/test_capped_prefix_counts.py
+
+### Legacy MakerNote top-directory inventory
+
+`legacy_maker_directory.py` supports #949's two older V0 inputs. It accepts
+only leading `OLYMP` plus NUL/version 1 or 2 headers and reads the complete
+bounded directory at relative byte 8 in the outer TIFF order. It reports
+numeric tag IDs/type/count, directory extent, next pointer and whether top
+entries 0x2040/0x2050 exist. It does not scan for signatures, traverse other
+numeric paths, parse metadata value blocks or infer global tag absence.
+Unknown headers remain unknown. Public identities are full-hash gated.
+
+    python -I -B tools/legacy_maker_directory.py --records RETAINED_CC0_JSON --sample 1800 FILE1800 --sample 1799 FILE1799
+    python -I -B tools/test_legacy_maker_directory.py
 
 ### V0 declared geometry inventory
 
@@ -2053,3 +2088,197 @@ decode.
 
     python -I -B tools/row_frame_probe.py [--rows N] FILE [FILE ...]
     python -I -B tools/test_row_frame_probe.py
+
+**`value_field_independent_audit.py`** independently checks the fixed #961
+candidate-word statistics. It reads a hash-verified snapshot and the declared
+strip sequence, starts after the first one bit, and retains the historical
+24-bit guard. Rows 20–599 and columns 20–W-21 are nominal token coordinates,
+not physical rows. It reports the full histogram, moments, class counts and
+lag pair denominators. `--null` uses the n+W+1 partner. Missing input, short
+parses and zero-variance results are unknown. Compare means, class means and
+correlations at the issue's three decimal places and SD and skew at two.
+No candidate value is asserted to be a sensor value.
+
+    python -I -B tools/value_field_independent_audit.py --sample PUBLIC_NAME SHA256 FILE
+    python -I -B tools/value_field_independent_audit.py --null --sample PUBLIC_NAME SHA256 FILE
+    python -I -B tools/test_value_field_independent_audit.py
+
+**`value_field_q_accounting.py`** accounts for the fixed #961 candidate-word
+field by partner q=0 versus q=1..11. It retains the historical first-one start,
+24-bit guard and omission of pairs containing a q>=12 escape. The `original`
+window uses nominal rows 20..599 and `later` uses 620..1199, both with columns
+20..W-21. The output includes exact 32-bin histograms, six additive term sums,
+current/partner q cross-counts, and pooled rational moments. The pooled third
+central moment is split into within-stratum, variance-offset interaction and
+cubic mean-offset terms. Empty strata and zero-variance skew are explicit.
+The symmetric 800-minus-200 mean decomposition reports within-stratum
+and composition terms, or unknown if a stratum is empty. Each input is hash
+checked and all selected files must succeed before a pooled comparison. Group
+labels and nominal coordinates are accounting choices, not physical ISO causes,
+physical rows or a predictor. Freeze the file list before measurement.
+
+    python -I -B tools/value_field_q_accounting.py --window original --sample 200 PUBLIC_NAME SHA256 FILE --sample 800 PUBLIC_NAME SHA256 FILE
+    python -I -B tools/test_value_field_q_accounting.py
+
+**`motif_interior_probe.py`** selects all complete six-field `100xxxxx` motifs
+in the fixed first 400 assumed pitches and retains only mutually unique edges.
+For their interiors it compares literal and capped k=4/5 candidate parses,
+including exact endpoint, target count, overrun reasons, escapes and paired
+four-grammar success masks. A zero-edge result is sparse, not a rejection.
+These are candidate indices and do not establish physical rows or a codec.
+The discovery CLI accepts the three hash-pinned #339 public OM-3 inputs.
+The optional `--cohort om3-repeat` accepts PA200011 and PA200015, and
+`--cohort em5-repeat` accepts P1010009/11/13/17/18/19. The retained CC0
+provenance records pin each full filename and hash.
+
+    python -I -B tools/motif_interior_probe.py --sample PA210010.ORF FILE --sample PA200010.ORF FILE --sample PA200012.ORF FILE
+    python -I -B tools/test_motif_interior_probe.py
+
+**`legacy_block_shape.py`** tests file-absolute and MakerNote-relative extent
+bases for the two declared type-7 legacy blocks. Only a uniquely bounded common
+base is tested for a nonempty TIFF-shaped directory at block byte zero, with
+block-relative value offsets. Shape match is not tag semantics or a codec.
+Discovery accepts 1800, 2878, 1799 and 780. `--cohort reserved` permits 3540.
+Hashes are pinned and unsupported, ambiguous and absent scopes remain distinct.
+
+    python -I -B tools/legacy_block_shape.py --sample 1800 FILE --sample 2878 FILE --sample 1799 FILE --sample 780 FILE
+    python -I -B tools/test_legacy_block_shape.py
+
+**`stride_head_sensitivity.py`** compares the fixed heads 8, 16, 32, 64 and
+128 on the nine historical #144 public samples. One q-capped-at-40 candidate
+parse supplies the original 300-row W..W+1200 stride scan and fixed scores at
+candidate rows 1000..1299. Each head's prefix winner and the head-32 winner
+are evaluated later without a new search. Prefix ties use the original tuple
+ordering and exact z ties are listed. Nonfinite prefix scores, incomplete
+bands and zero-variance later scores have explicit statuses. Z scores and
+selection margins are descriptive, not calibrated significance or evidence of
+physical row boundaries. Hashes are checked before parsing.
+
+    python -I -B tools/stride_head_sensitivity.py --sample ID PUBLIC_NAME SHA256 FILE
+    python -I -B tools/test_stride_head_sensitivity.py
+
+### Legacy exterior declaration audit
+
+`legacy_exterior_declarations.py --sample 1800 PATH --sample 2878 PATH` checks
+only the two frozen exterior intervals from #982. It checks each complete input
+against the retained public SHA-256, then follows bounded IFD0, next, SubIFD and
+standard Exif links. It reports intersecting directory, typed out-of-line value,
+JPEG interchange and strip declarations and the union of their intersections.
+The MakerNote value itself is excluded. It does not interpret the target bytes,
+follow private directories, or establish ownership of an otherwise undeclared
+interval. An inaccessible or malformed branch makes coverage unknown while
+preserving earlier intersections. The limits are 128 directories and 65,536
+values per consulted pointer array. Output contains no local paths or image data.
+
+For the separately frozen E-500 3540 extension, use
+`python -I -B tools/legacy_exterior_declarations.py --extension --sample 3540 PATH`.
+The fixed exterior is [3982,4018), from #993. The extension flag permits only
+3540; the default remains the original 1800 and 2878 cohort.
+
+### White-file all-edge motif comparison
+
+`python -I -B tools/white_motif_all_edges.py --sample PATH` uses only the pinned
+PA210010 white file and requires the historical 791 motifs and 1,568 directed
+edges before parsing. `--repeat` selects the adjacent disjoint 400-pitch window,
+without a discovery-count expectation. Each grammar scores every edge between
+literal motifs. Degree and gap strata report edge counts by paired success mask;
+source all/some/none counts include only motifs with at least one outgoing edge.
+Edges share motifs and do not establish independent physical rows or a codec.
+
+### Literal zero-run support for fixed motif edges
+
+`python -I -B tools/motif_escape_support.py --sample PATH` uses the pinned
+public E-M1 Mark II 1993 file. The same literal all-edge selector is applied
+before either candidate grammar, and only intervals enclosing a raw run of at
+least 12 zero bits and both flanking ones are tested. Support, paired endpoints
+and required word-count successes, overrun reasons and completed escapes are
+aggregates. A raw run is not an escape and sparse support does not adjudicate
+the grammar. `--repeat` accepts only the separately pinned 1997 file.
+
+For the fixed E-M5 Mark II support comparison, `--em5 --sample FILE0019`
+uses [40+620P,40+1200P), P=6W+12 at W=4640. `--em5 --repeat --sample
+FILE0017` selects the separately reserved public file. The cap-only success
+count requires a completed capped escape at a supported run on the same edge.
+The `escape_support` status alone only means a capped escape completed on a
+run-bearing edge, even if it did not coincide with any qualifying run.
+Neither the nominal interval nor the literal motif establishes physical rows.
+
+### Candidate-field partner permutation accounting
+
+`value_field_partner_null.py --sample NAME PATH` accepts each of the six fixed
+OM-3 dark files in frozen order. `--cohort repeat` selects the six separately
+reserved E-M5 Mark II darks. The fixed original token band is unchanged from
+#972. Exact row-by-partner-q permutation expectations preserve both current-sign
+and partner-value marginals. The reported pairing remainder is the observed
+partner contribution minus that expectation. Results are descriptive, not
+physical predictions. Run the generated controls with
+`python -I -B tools/test_value_field_partner_null.py`.
+
+### Candidate residual free-seed range test
+
+`value_field_predictor_range.py --sample NAME PATH` repeated for the six frozen
+OM-3 darks tests exact unwrapped H lag-2 and V lag-2W chain spans in the fixed
+#972 candidate rectangle. `--cohort repeat` selects the separately reserved
+E-M5 II files. Two fixed row-and-parity shuffles preserve omissions. Passing
+this range necessity does not establish a physical predictor or coordinates.
+
+### Candidate-field order-sensitive H bridge
+
+`value_field_order_bridge.py --sample NAME PATH` takes the six fixed OM-3 darks
+in frozen order. `--cohort repeat` selects the reserved E-M5 II cohort. It pools
+centered H bridges at nominal row-plus-two, matching the same column parity.
+Two fixed shuffles preserve full blocks of 32 residuals and the terminal tail.
+Run `python -I -B tools/test_value_field_order_bridge.py` for generated controls.
+These candidate coordinates and null comparisons do not establish a predictor.
+
+### Literal fixed-pitch motif lattice
+
+`literal_motif_lattice.py --sample NAME PATH` takes the fixed white and dark
+OM-3 discovery files in order; `--cohort repeat` selects the reserved two darks.
+All complete literal motifs are counted in two fixed windows. Pitch and phase
+are tested as exact bit-position lattices, without parsing candidate tokens.
+The best first-window pair is carried into the next window without refitting.
+Run `python -I -B tools/test_literal_motif_lattice.py` for the generated controls.
+A missing lattice does not rule out variable-length rows or another marker.
+
+### Fixed motif edge bit budget
+
+`fixed_motif_edge_budget.py --sample NAME PATH` takes the frozen white/dark
+OM-3 discovery files. `--cohort repeat` selects the separately reserved dark.
+Only adjacent present motifs at frozen phases are scored. A missing motif is
+not bridged. The stride-six stop-bit check audits k5 exact-count equality
+without establishing a codec. Run `python -I -B tools/test_fixed_motif_edge_budget.py`
+for generated controls.
+
+### Fixed motif phase continuity
+
+`fixed_motif_phase_continuity.py --sample NAME PATH` takes the fixed white and
+dark OM-3 discovery inputs. `--cohort repeat` selects the reserved dark. It
+gates the prior two windows before checking farther nominal positions, reports
+literal motif coverage and terminal fit, and does not parse candidate words.
+Discovery order is `--sample PA210010.ORF PATH --sample PA200010.ORF PATH`.
+The fixed identity and phase pins are in `tools/fixed_motif_edge_budget.py`.
+Run generated checks with `python -I -B tools/test_fixed_motif_phase_continuity.py`.
+
+### Alternate literal motif phase
+
+`alternate_motif_phase.py --sample PA200010.ORF PATH --sample PA210010.ORF PATH`
+uses the frozen dark/white order. `--cohort repeat --sample PA200011.ORF PATH`
+uses the reserved file. A fit-window phase is held fixed for both score windows;
+all six fields must fit the declared strip, including across a tile boundary.
+Run generated checks with `python -I -B tools/test_alternate_motif_phase.py`.
+
+### Candidate byte-phase tables
+
+`candidate_byte_phase.py --sample 1993 PATH --sample 1997 PATH` computes the
+fixed continuous candidate-token start phases and deterministic rotations.
+`--cohort repeat --sample 1998 PATH` selects the reserved file. The test does
+not establish physical byte alignment or escape syntax.
+Run generated checks with `python -I -B tools/test_candidate_byte_phase.py`.
+
+### Common-support donor signs
+
+`common_support_donor.py --sample 1993 PATH --sample 5283 PATH` compares fixed
+candidate b2 donor lags on a common target mask. `--cohort repeat --sample 6343
+PATH` selects the reserved file. The nominal parity and signs are not physical
+rows, CFA interpretation or a predictor.
