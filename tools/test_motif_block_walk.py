@@ -88,7 +88,7 @@ class WalkTests(unittest.TestCase):
         self.assertEqual(r["reference_bits"], 6 * W + 12)
         self.assertEqual(r["block01_bits"], [6 * W + 12] * 2)
         self.assertEqual(r["blocks_at_reference"], 4)
-        self.assertEqual(r["first_block_off_reference"], "none")
+        self.assertIsNone(r["first_block_off_reference"])     # every body block at 6W+12
         self.assertEqual(r["motif_column_hist"], {"2": 4})
 
     def test_column_is_a_word_index_not_a_bit_offset(self):
@@ -126,12 +126,28 @@ class WalkTests(unittest.TestCase):
 
     def test_tail_bits_and_ones(self):
         r = mbw.walk(stream([block(W, 2)] * 3, tail="1110"), W, 3)
-        self.assertEqual((r["tail_ones"], r["tail_bits"]), (3, 4 + (-(4 + 3 * (6 * W + 12) + 4) % 8)))
+        pad = -(4 + 3 * (6 * W + 12) + 4) % 8
+        self.assertEqual((r["tail_ones"], r["tail_bits"]), (3, 4 + pad))
 
     def test_truncated_last_word_is_incomplete(self):
         bits = "0001" + block(W, 2) * 2 + word()[:3]
         r = mbw.walk(payload(bits), W, 3)
         self.assertEqual((r["status"], r["blocks_complete"]), ("incomplete", 2))
+
+    def test_no_body_blocks_still_prints_every_key(self):
+        r = mbw.walk(stream([block(W, 2)] * 2), W, 2)
+        self.assertEqual((r["status"], r["body_blocks"]), ("ok", 0))
+        self.assertEqual((r["motif_column_hist"], r["column_runs"]), ({}, []))
+        self.assertIsNone(r["first_block_off_reference"])
+
+    def test_incomplete_reports_complete_body_blocks_only(self):
+        bits = "0001" + block(W, 2) * 2 + block(W, 2, extra=word(3)) + word()[:3]
+        r = mbw.walk(payload(bits), W, 5)
+        self.assertEqual((r["status"], r["body_blocks"]), ("incomplete", 1))
+        self.assertEqual(r["first_block_off_reference"], 2)
+
+    def test_start_bit_is_after_the_marker_one(self):
+        self.assertEqual(mbw.walk(stream([block(W, 2)] * 3), W, 3)["start_bit"], 4)
 
     def test_empty_and_all_zero(self):
         self.assertEqual(mbw.walk(b"", W, 2)["status"], "no_marker")
@@ -146,6 +162,48 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual(split["strips"], 2)
         for key in ("status", "excess_bits_hist", "motif_column_hist", "tail_bits"):
             self.assertEqual(split[key], joined[key])
+
+    def test_mismatched_strip_tables_are_unknown(self):
+        p = stream([block(W, 2)] * 4)
+        data = bytearray(container([p[:7], p[7:]], W, 4))
+        counts_entry = 8 + 2 + 12 * 3                     # 0x117 is the fourth entry
+        struct.pack_into("<I", data, counts_entry + 4, 1)  # two offsets, one count
+        r = mbw.measure(bytes(data))
+        self.assertEqual((r["status"], r["reason"]), ("unknown", "mismatched_strip_tables"))
+
+    def test_tied_largest_ifds_are_unknown(self):
+        p = stream([block(W, 2)] * 4)
+        one = bytearray(container([p], W, 4))
+        second_at = len(one)
+        offset_field = 8 + 2 + 12 * 2 + 8                  # 0x111 value field in IFD0
+        strip_at = struct.unpack_from("<I", one, offset_field)[0]
+        twin = ifd([(0x100, 4, 1, u32(W)), (0x101, 4, 1, u32(4)),
+                    (0x111, 4, 1, u32(strip_at)), (0x117, 4, 1, u32(len(p)))])
+        struct.pack_into("<I", one, 8 + 2 + 12 * 4, second_at)   # IFD0 next -> twin
+        r = mbw.measure(bytes(one) + twin)
+        self.assertEqual((r["status"], r["reason"]), ("unknown", "ambiguous_largest_ifd"))
+
+    def test_text_subifd_pointer_is_unknown_and_the_run_continues(self):
+        p = stream([block(W, 2)] * 4)
+        n = 5
+        entries = [(0x100, 4, 1, u32(W)), (0x101, 4, 1, u32(4)),
+                   (0x111, 4, 1, u32(8 + 2 + 12 * n + 4)), (0x117, 4, 1, u32(len(p))),
+                   (0x14a, 2, 4, b"abc\0")]                # SubIFDs as ASCII text
+        bad = b"II*\x00" + u32(8) + ifd(entries) + p
+        self.assertEqual(mbw.measure(bad)["status"], "unknown")
+        with tempfile.TemporaryDirectory() as d:
+            a, b = os.path.join(d, "a"), os.path.join(d, "b")
+            with open(a, "wb") as f:
+                f.write(bad)
+            with open(b, "wb") as f:
+                f.write(container([p], W, 4))
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = mbw.main([a, b])
+        lines = out.getvalue().splitlines()
+        self.assertEqual(code, 1)
+        self.assertIn('"status": "unknown"', lines[0])
+        self.assertIn('"status": "ok"', lines[1])
 
     def test_overlapping_strips_are_unknown(self):
         p = stream([block(W, 2)] * 4)

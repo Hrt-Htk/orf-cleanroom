@@ -2249,17 +2249,22 @@ rows, CFA interpretation or a predictor.
 ### Motif block walk
 
 **`motif_block_walk.py`** parses W*H candidate words of the #951 grammar from
-the literal marker (capped k=5, 24-bit escapes, word ends bounded by the payload
-end) in blocks of W words, and finds in each block the first word column below
-`--max-col` (default 24, never past the block's W words) where the six fields
-`100xxxxx` of #950/#1031 start. A block is a fixed count of candidate words, not
-a physical row. It prints block lengths against the comparison value 6W+12 (the
-fixed pitch of #1031), the motif-column histogram (`none` = no match at those
-columns, `outside` = fewer than 48 payload bits left), maximal column runs of at
-least `--min-run` blocks, and the bits left after W*H words. Status is `ok`,
-`no_marker` (empty or all-zero payload), `incomplete` (complete blocks
-reported) or `unknown` (unsupported container). `--per-block` adds one record
-per block: block, start bit, bits, motif column, motif bit.
+`start_bit`, the bit after the literal marker's 1 (capped k=5, 24-bit escapes,
+word ends bounded by the payload end), in blocks of W words. In each block it
+records the length and the first word start below `--max-col` (default 24, never
+past the block's W words) where the six fields `100xxxxx` of #950/#1031 begin;
+only word starts are checked and only the first match is kept. A block is a
+fixed count of candidate words, not a physical row. It prints block lengths
+against 6W+12 (extending #1031's fixed 31332-bit pitch at W = 5220 to any W; a
+comparison value only), the motif-column histogram (`none` = no match at those
+word starts, `outside` = fewer than 48 payload bits left), maximal column runs
+of at least `--min-run` blocks, and the bits left after W*H words. `body_blocks`
+counts the complete blocks from block 2, which the histograms, runs and
+`first_block_off_reference` (null when all are 6W+12) cover. Status is `ok`,
+`no_marker` (empty or all-zero payload), `incomplete` (complete blocks reported)
+or `unknown` (unsupported container or file over 128 MiB, with the reason; the
+run continues). `--per-block` adds one record per block: block, start bit, bits,
+motif column, motif bit.
 
     python -I -B tools/motif_block_walk.py [--max-col N] [--min-run N] [--per-block] FILE [FILE ...]
     python -I -B tools/test_motif_block_walk.py

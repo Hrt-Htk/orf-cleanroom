@@ -7,23 +7,29 @@ no image data.
 
 Payload: the declared strip sequence read by strip_start_audit.independent_strips
 (separated strips joined in table order without gap bytes; tied, overlapping or
-mismatched strip tables give status=unknown and the run continues).
+mismatched strip tables, other unsupported containers and files over 128 MiB
+give status=unknown with a reason, and the run continues).
 
 Candidate grammar (#951, not established): a literal marker of leading zero
-bits and a 1, then words. A word is q < 12 zeros, a 1 and 5 suffix bits; 12
-zeros start an escape of 24 bits. Word ends are bounded by the payload end
-(capped_prefix_counts.word_end).
+bits and a 1, then words from start_bit, the bit after that 1. A word is q < 12
+zeros, a 1 and 5 suffix bits; 12 zeros start an escape of 24 bits. Word ends are
+bounded by the payload end (capped_prefix_counts.word_end).
 
-Block b is words b*W .. b*W+W-1 counted from the marker, for b = 0 .. H-1. A
+Block b is words b*W .. b*W+W-1 counted from start_bit, for b = 0 .. H-1. A
 block is a fixed count of candidate words, not a physical row. Per block the
-tool records its length in bits and its motif column: the first word index c
-(0 <= c < min(--max-col, W)) in the block at which the 48 bits match the six 8-bit
-fields (?:100[01]{5}){6} of #950/#1031. "none" = no match at those columns; "outside" = fewer than 48 payload bits remain at a column
-reached before any match.
+tool records its length in bits and its motif column: the first word start c
+(0 <= c < min(--max-col, W)) in the block at which the 48 bits match the six
+8-bit fields (?:100[01]{5}){6} of #950/#1031. Only word starts are checked and
+only the first match in a block is recorded. "none" = no match at those word
+starts; "outside" = fewer than 48 payload bits remain at a word start reached
+before any match.
 
-Reference length: 6W+12 bits, the fixed pitch of #1031 (W words of six bits
-plus 12). It is a comparison value, not a measured length. Blocks 0 and 1 are
-reported apart; histograms cover blocks 2 .. H-1.
+Reference length: 6W+12 bits, extending the fixed 31332-bit pitch of #1031 (at
+W = 5220) to any W. It is a comparison value, not a measured length. Blocks 0
+and 1 are reported apart. body_blocks counts the complete blocks from block 2;
+the histograms, runs and first_block_off_reference cover those blocks only
+(fewer than H - 2 when status is incomplete). first_block_off_reference is null
+when every one of them is 6W+12 bits long, and also when body_blocks is 0.
 
 Status: ok (all W*H words complete), no_marker (empty or all-zero payload),
 incomplete (a word did not fit before W*H words; complete blocks reported),
@@ -33,7 +39,9 @@ unknown (container not supported, with the reason).
 block: [block, start bit, bits, motif column, motif bit or null]. Bit positions
 count from the first payload bit.
 
-Usage: python -I -B tools/motif_block_walk.py [--max-col N] [--min-run N] [--per-block] FILE [FILE ...]
+Usage:
+    python -I -B tools/motif_block_walk.py [--max-col N] [--min-run N] [--per-block]
+        FILE [FILE ...]
 """
 import argparse
 import hashlib
@@ -44,10 +52,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from capped_prefix_counts import word_end  # noqa: E402
+from motif_interior_probe import MOTIF, OCTETS  # noqa: E402
 from strip_start_audit import independent_strips  # noqa: E402
 
-OCTETS = tuple(format(i, "08b") for i in range(256))
-MOTIF = re.compile("(?:100[01]{5}){6}")
+MAX_BYTES = 128 * 1024 * 1024
 
 
 def motif_column(bits, pos, max_col):
@@ -84,7 +92,7 @@ def hist(values):
     h = {}
     for v in values:
         h[str(v)] = h.get(str(v), 0) + 1
-    return dict(sorted(h.items(), key=lambda kv: -kv[1]))
+    return h
 
 
 def walk(payload, width, height, max_col=24, min_run=50, blocks=None):
@@ -98,7 +106,7 @@ def walk(payload, width, height, max_col=24, min_run=50, blocks=None):
         return out
     pos = first + 1
     ref = 6 * width + 12
-    out.update(marker=pos, payload_bits=len(bits), reference_bits=ref)
+    out.update(start_bit=pos, payload_bits=len(bits), reference_bits=ref)
     lengths, columns = [], []
     for b in range(height):
         start = pos
@@ -120,13 +128,13 @@ def walk(payload, width, height, max_col=24, min_run=50, blocks=None):
     out["block01_bits"] = lengths[:2]
     out["block01_motif_columns"] = columns[:2]
     body_len, body_col = lengths[2:], columns[2:]
-    if body_len:
-        off = [i for i, n in enumerate(body_len) if n != ref]
-        out["blocks_at_reference"] = len(body_len) - len(off)
-        out["first_block_off_reference"] = off[0] + 2 if off else "none"
-        out["excess_bits_hist"] = hist(n - ref for n in body_len)
-        out["motif_column_hist"] = hist(body_col)
-        out["column_runs"], out["short_run_blocks"] = runs(body_col, 2, min_run)
+    off = [i for i, n in enumerate(body_len) if n != ref]
+    out["body_blocks"] = len(body_len)
+    out["blocks_at_reference"] = len(body_len) - len(off)
+    out["first_block_off_reference"] = off[0] + 2 if off else None
+    out["excess_bits_hist"] = hist(n - ref for n in body_len)
+    out["motif_column_hist"] = hist(body_col)
+    out["column_runs"], out["short_run_blocks"] = runs(body_col, 2, min_run)
     return out
 
 
@@ -134,8 +142,9 @@ def measure(data, max_col=24, min_run=50, blocks=None):
     digest = hashlib.sha256(data).hexdigest()
     try:
         geometry, payload = independent_strips(data)
-    except ValueError as exc:
-        return {"sha256": digest, "status": "unknown", "reason": str(exc)}
+    except (ValueError, TypeError, IndexError, KeyError) as exc:
+        reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+        return {"sha256": digest, "status": "unknown", "reason": reason}
     r = walk(payload, geometry["width"], geometry["height"], max_col, min_run, blocks)
     r["sha256"] = digest
     r["strips"] = geometry["strip_count"]
@@ -163,7 +172,11 @@ def main(argv=None):
         blocks = [] if a.per_block else None
         try:
             with open(path, "rb") as f:
-                r = measure(f.read(), a.max_col, a.min_run, blocks)
+                data = f.read(MAX_BYTES + 1)
+            if len(data) > MAX_BYTES:
+                r = {"input": n, "status": "unknown", "reason": "file_over_128_MiB"}
+            else:
+                r = measure(data, a.max_col, a.min_run, blocks)
         except OSError as exc:
             r = {"input": n, "status": "unknown", "reason": type(exc).__name__}
         failed |= r["status"] == "unknown"
