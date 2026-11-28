@@ -2245,3 +2245,21 @@ Run generated checks with `python -I -B tools/test_candidate_byte_phase.py`.
 candidate b2 donor lags on a common target mask. `--cohort repeat --sample 6343
 PATH` selects the reserved file. The nominal parity and signs are not physical
 rows, CFA interpretation or a predictor.
+
+### Motif block walk
+
+**`motif_block_walk.py`** parses W*H candidate words of the #951 grammar from
+the literal marker (capped k=5, 24-bit escapes, word ends bounded by the payload
+end) in blocks of W words, and finds in each block the first word column below
+`--max-col` (default 24, never past the block's W words) where the six fields
+`100xxxxx` of #950/#1031 start. A block is a fixed count of candidate words, not
+a physical row. It prints block lengths against the comparison value 6W+12 (the
+fixed pitch of #1031), the motif-column histogram (`none` = no match at those
+columns, `outside` = fewer than 48 payload bits left), maximal column runs of at
+least `--min-run` blocks, and the bits left after W*H words. Status is `ok`,
+`no_marker` (empty or all-zero payload), `incomplete` (complete blocks
+reported) or `unknown` (unsupported container). `--per-block` adds one record
+per block: block, start bit, bits, motif column, motif bit.
+
+    python -I -B tools/motif_block_walk.py [--max-col N] [--min-run N] [--per-block] FILE [FILE ...]
+    python -I -B tools/test_motif_block_walk.py
