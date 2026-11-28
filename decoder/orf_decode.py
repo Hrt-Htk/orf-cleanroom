@@ -358,6 +358,9 @@ def decode_file(path, order=None, layout=None):
         # 2026-10-27--radialmonster--phase-cpu-table-reproduction (#356): the
         # unassigned CPU search table reproduces within its coarse/refined family;
         # it establishes no physical row origin or decode step (V1 S1.15, G3/G4).
+        # 2026-11-25--radialmonster--om1ii-preview-shift-reproduction (#980):
+        # two fixed OM-1 Mark II comparisons favor nonzero preview shifts.
+        # Physical alignment remains open (V1 S1.15/G4).
         # 2026-10-27--mszyndel--om1-topband-luma-reproduction (#368) measures
         # unassigned OM-1 top-band scores at fixed width stride and phase 0;
         # it specifies no physical rows, values or decode (V1 S1.15, G4).
@@ -399,6 +402,9 @@ def decode_file(path, order=None, layout=None):
         # (V1 S1.17). F_DEP_CORR (Partial correction for #11, corrects F_DEP):
         # the measured within-token H/L MI is small but nonzero; exact
         # independence is not established (V1 S1.17).
+        # 2026-11-25--radialmonster--stride-head-sensitivity-reproduction
+        # (#974): fixed candidate head winners and later signs vary. These
+        # folds do not identify physical rows or headers (V1 S1.10/G3).
         # F_STRIDE (Partial for #144): a 300-row row-start q profile finds file-specific
         # token strides above W on new OM-5/OM-1 files; it establishes no physical rows
         # or values (V1 S1.10). F_STRIDE_OM5 (Partial for #144, own files not yet
@@ -503,14 +509,71 @@ def decode_file(path, order=None, layout=None):
         # 83 variable-size CC0 files and q=47/suffix 0 on four large-sensor files;
         # it specifies no value assembly, decode step or variant assignment
         # (V1 S1.13, V2 S1.2).
+        # 2026-11-24--mszyndel--literal-group-border-fields (#958): two-value
+        # IP fields are not a scalar column declaration; physical coordinates
+        # and the candidate group's origin remain open (V1 S1.24/G3).
         # 2026-11-24--Hrt-Htk--flat-selected-boundary-extension (Partial #951):
         # flat candidate endpoints reproduce on two bodies, with wider-chain
         # misses/column changes and an explicit three-word tail-count scope.
         # Neither reading establishes physical rows or values (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--motif-interior-width-reproduction (#976):
+        # selected interiors favor the tested k=5 counts on named dark files.
+        # The white file has no selected pairs and no capped escapes complete.
+        # Physical rows and escape syntax remain open (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--white-all-edges-reproduction (#988):
+        # shared white-file motif edges favor the tested k=5 count, with no
+        # completed capped escapes. Physical anchors remain open (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--candidate-byte-phase-reproduction (#1039):
+        # conditional byte-phase association does not fix physical starts.
+        # 2026-11-25--radialmonster--om3-alternate-phase-reproduction (#1035):
+        # fit-selected alternate phases partially recover literal motif hits.
+        # Physical boundaries remain open (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--fixed-motif-phase-reproduction (#1031):
+        # whole-strip fixed-phase coverage differs across named captures.
+        # Nominal bit positions are not physical rows (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--fixed-motif-edge-reproduction (#1027):
+        # fixed available interiors meet an equivalent six-bit budget predicate.
+        # Physical framing and escape syntax remain open (V1 S1.23/G3/G11).
+        # 2026-11-25--radialmonster--fixed-motif-lattice-reproduction (#1023):
+        # fixed literal lattices vary across named files and windows. Physical
+        # framing remains open (V1 S1.23/G3/G11).
+        # 2026-11-25--radialmonster--em5-motif-escape-reproduction (#1007):
+        # six supported interiors lack the specified cap-only coincidence.
+        # The reserved file has no support. Physical anchors remain open (V1 G11).
+        # 2026-11-25--radialmonster--motif-escape-support-reproduction (#990):
+        # two fixed motif windows lack qualifying zero-run support. No escape
+        # rule comparison or physical framing follows (V1 S1.23/G11).
+        # 2026-11-25--radialmonster--dark-h-bridge-reproduction (#1019):
+        # fixed H bridge scores show mixed control comparisons. V and physical
+        # reconstruction remain open (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--dark-predictor-range-reproduction (#1015):
+        # fixed H/V range necessity also holds for both shuffled controls.
+        # A physical predictor remains open (V1 S1.23/G3).
+        # 2026-11-25--radialmonster--dark-partner-permutation-reproduction
+        # (#1011): fixed-field contrasts have current, row-and-q expectation
+        # and pairing terms. Physical reconstruction remains open (V1 G3).
+        # 2026-11-25--radialmonster--fixed-dark-field-q-accounting-reproduction
+        # (#972): within-stratum effects dominate the fixed dark-field account.
+        # Candidate values and physical correspondence remain open (V1 G3).
+        # 2026-11-25--Hrt-Htk--fixed-value-field-dark-comparison (Partial #961)
+        # reproduces 88 rounded cells and extends the fixed candidate-word
+        # statistics to six E-M5 II darks. Physical rows, values and predictor
+        # remain open (V1 G2).
         # 2026-11-24--Hrt-Htk--literal-makernote-prefix-correlation (Partial #949):
         # 43 variable-size public inputs match 8*IP[0x0653]-1 initial zeros.
         # Literal metadata associations specify no tag meanings, framing,
         # value assembly or variant assignment (V2 S1.7/G4).
+        # 2026-11-25--radialmonster--legacy-exterior-declarations-reproduction
+        # (#984): reached outer declarations do not overlap three fixed legacy
+        # exterior intervals. Ownership and private layout remain unknown.
+        # 2026-11-25--radialmonster--legacy-block-bases-reproduction (#982):
+        # both fixed envelope hypotheses fail on three legacy inputs. Actual
+        # base and inner layout remain unknown (V0 S1.7, V2 G4).
+        # 2026-11-24--mszyndel--legacy-maker-top-byte-blocks (#964): legacy
+        # 2040/2050 entries may be UNDEFINED blocks, not modern IFD pointers.
+        # 2026-11-25--radialmonster--legacy-e300-identity-correction (#977)
+        # corrects the model label for ID 2878 to E-300.
+        # Their internal fields and geometry remain unknown (V0 S1.7/V2 G4).
         # 2026-11-20--mszyndel--declared-strip-starts (#829): independent
         # reproduction 2026-11-20--mszyndel--declared-strip-starts-independent-reproduction
         # matched all twelve published rows. The independent
@@ -553,6 +616,9 @@ def decode_file(path, order=None, layout=None):
         # 2026-10-27--mtakemoto--controlled-flat-recompression (Partial for
         # #339): controlled-file prefix ratios reproduce; sizes do not identify
         # a codec (V1 S1.8).
+        # 2026-11-24--radialmonster--white-repeat-independent-reproduction:
+        # @mszyndel matches all #864 fit costs and 14 records; new dark and
+        # larger windows extend literal costs, not camera syntax (V1 S1.8).
         # 2026-11-20--radialmonster--white-payload-literal-repeat-description:
         # charged six-bit repeat description covers a white strip (V1 S1.8).
         # 2026-11-20--radialmonster--six-bit-repeat-width-ambiguity:
@@ -609,8 +675,8 @@ def decode_file(path, order=None, layout=None):
         # physical registration remains open (V1 S1.11/G3).
         # 2026-11-20--radialmonster--synthetic-suffix-width-closure-ambiguity (#844):
         # synthetic count and endpoint ties leave camera polarity and width open (V1 G8/G9).
-        r.update(variant="compressed", status="not yet specified (framing and value assembly remain open; unassigned #338/#561 dark offsets, independently reproduced #734 fixed-period control and #757 local suffix balance and #765 conditional ordering and #777 free-anchor constraints and #781 matched boundaries and #788 origin sensitivity and #792 common phase and independently reproduced #799 whole-strip contracts and #803 table shifts and #807 A15 candidate and independently reproduced #829 declared-strip audit and #840 horizontal shifts and #844 synthetic width controls and #848 nominal 2W gains and #852 two-suffix phrase phases and #856 bridge scale ratios and #860 common-end coalescence and #864 white literal repeat description and #868 synthetic width ambiguity and #876 cross-body table transfer and #880 High Res vertical comparison and #886 fixed-support side-peak control and #892 suffix profile comparison and #896 cross-preview specificity and #900 direct BYTE tag inventory and #903 literal MakerNote values and #907 outer preview declaration audit and #912 MakerNote preview length correspondence and #916 MakerNote JPEG locator and #920 independently reproduced metadata-first JPEG locator and #924 locator cohort and #928 external boundary audit and #938 leading OM SYSTEM preview locator and #946 combined preview cohort and #933 V0 geometry inventory and #944 V0 MakerNote geometry and independently reproduced #949 literal prefix correlations and #951 flat selected-boundary limits specify no codec or physical rows)")
-        r["notes"].append("compressed payload (%s bits per pixel); no decoder or padding rule is specified yet; suffix associations do not specify values, see specs/V1.md S1.1-S1.2, S1.7-S1.23, S2.3, G2, specs/V2.md S1.1-S1.2 and ROADMAP.md" % sig["bpp"])
+        r.update(variant="compressed", status="not yet specified (framing and value assembly remain open; unassigned #338/#561 dark offsets, independently reproduced #734 fixed-period control and #757 local suffix balance and #765 conditional ordering and #777 free-anchor constraints and #781 matched boundaries and #788 origin sensitivity and #792 common phase and independently reproduced #799 whole-strip contracts and #803 table shifts and #807 A15 candidate and independently reproduced #829 declared-strip audit and #840 horizontal shifts and #844 synthetic width controls and #848 nominal 2W gains and #852 two-suffix phrase phases and #856 bridge scale ratios and #860 common-end coalescence and independently reproduced #864 white literal repeat description and #868 synthetic width ambiguity and #876 cross-body table transfer and #880 High Res vertical comparison and #886 fixed-support side-peak control and #892 suffix profile comparison and #896 cross-preview specificity and #900 direct BYTE tag inventory and #903 literal MakerNote values and #907 outer preview declaration audit and #912 MakerNote preview length correspondence and #916 MakerNote JPEG locator and #920 independently reproduced metadata-first JPEG locator and #924 locator cohort and #928 external boundary audit and #938 leading OM SYSTEM preview locator and #946 combined preview cohort and #933 V0 geometry inventory and #944 V0 MakerNote geometry and independently reproduced #949 literal prefix correlations and #951 flat selected-boundary limits and #958 literal group-border fields and #964 legacy top blocks with #977 identity correction and #982 legacy base tests and #984 exterior declaration audit and #961 dark field statistics and #972 q-stratum accounting and #1011 partner permutation and #1015 predictor-range controls and #1019 H-bridge comparisons and #976 motif-interior comparisons and #988 white all-edge outcomes and #990 escape-support limits and #1007 E-M5 escape comparison and #1023 motif lattices and #1039 candidate byte phases and #1035 alternate phase limits and #1031 fixed phase limits and #1027 fixed edge budgets and #974 stride-head sensitivity and #980 OM-1 Mark II shifts specify no codec or physical rows)")
+        r["notes"].append("compressed payload (%s bits per pixel); no decoder or padding rule is specified yet; suffix associations do not specify values, see specs/V1.md S1.1-S1.2, S1.7-S1.24, S2.3, G2, specs/V2.md S1.1-S1.2 and ROADMAP.md" % sig["bpp"])
         return r
     packing = sc
     # 2026-10-27--radialmonster--whole-frame-unit-order-reproduction (#538):
