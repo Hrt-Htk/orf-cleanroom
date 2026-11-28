@@ -2025,11 +2025,14 @@ in table order; tied, overlapping or mismatched tables reported as unknown).
 
 Selected positions: every match of `(?:100[01]{5}){6}` (six 8-bit fields
 `100xxxxx`) from the end of the literal leading-zeros marker to
-marker + `--rows` x pitch bits, pitch = 6W+12 (assumed). Matches are chained
-when the next lies pitch +/- tolerance bits after the previous kept one,
-tolerance = max(64, pitch // 100) (313 bits at W = 5220); a match closer than
-the tolerance is dropped, and only the longest chain is kept. `pitch` and
-`tolerance` are printed. `selected_starts` and `selected_intervals` count that
+marker + `--rows` x pitch bits, pitch = 6W+12 (assumed), tolerance = max(64,
+pitch // 100) (313 bits at W = 5220). Selection is greedy, one pass in bit
+order: a match closer than the tolerance to the last kept match of the current
+run is skipped, a match pitch +/- tolerance after it extends the run, and any
+other match starts a new run. The run with the most matches is kept (the first
+on a tie). This is not a longest-chain search: matches [0, 936, 1000, 2064] at
+pitch 1000 and tolerance 64 keep [0, 936], although [0, 1000, 2064] also chains
+within tolerance. `pitch` and `tolerance` are printed. `selected_starts` and `selected_intervals` count that
 chain; `intervals_exact_k5` / `intervals_exact_head` count intervals whose W
 words, parsed from one selected start, end exactly on the next. This agreement
 is measured only at the selected positions: it is not a measured row pitch and

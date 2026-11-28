@@ -63,6 +63,13 @@ class ChainTests(unittest.TestCase):
     def test_close_second_match_is_dropped(self):
         self.assertEqual(chain([0, 8, 1000, 1008], 1000, 64), [0, 1000])
 
+    def test_selection_is_greedy_not_longest(self):
+        # [0, 1000, 2064] also chains, but the greedy pass keeps [0, 936].
+        self.assertEqual(chain([0, 936, 1000, 2064], 1000, 64), [0, 936])
+
+    def test_tie_keeps_the_first_run(self):
+        self.assertEqual(chain([0, 1000, 5000, 6000], 1000, 64), [0, 1000])
+
     def test_no_chain(self):
         self.assertEqual(chain([], 1000, 64), [])
         self.assertEqual(chain([0], 1000, 64), [])

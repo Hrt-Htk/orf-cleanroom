@@ -17,12 +17,17 @@ the payload is incomplete and ends any parse there (capped_prefix_counts.word_en
 
 Selected starts: every match of the bit pattern (?:100[01]{5}){6} (six 8-bit
 fields 100xxxxx) from the marker end to marker + --rows * pitch bits, where
-pitch = 6W+12 is an assumed interval. Matches are chained when the next one lies
-pitch +/- tolerance bits after the previous one, tolerance = max(64,
-pitch // 100); a match closer than the tolerance to the previous kept one is
-dropped (a group of six fields also matches 8 bits later). Only the longest
-chain is kept. Its starts are positions where the pattern was selected, not
-physical row starts, and its intervals are not a measured row pitch.
+pitch = 6W+12 is an assumed interval, tolerance = max(64, pitch // 100).
+Selection is greedy, one pass over the matches in bit order: a match closer
+than the tolerance to the last kept match of the current run is skipped (a
+group of six fields also matches 8 bits later); a match pitch +/- tolerance
+after it extends the run; any other match ends the run and starts a new one.
+The run with the most matches is kept, the first one on a tie; runs of one
+match are not kept. This is not a longest-chain search: with matches
+[0, 936, 1000, 2064], pitch 1000 and tolerance 64 it keeps [0, 936], although
+[0, 1000, 2064] also chains within tolerance. The kept starts are positions
+where the pattern was selected, not physical row starts, and their intervals
+are not a measured row pitch.
 
 From each selected start both readings are parsed for W words: plain k=5, and
 six k=7 words followed by k=5 (the head rule). An interval is exact under a
@@ -62,8 +67,10 @@ def pitch_and_tolerance(width):
 
 
 def chain(starts, pitch, band):
-    """Longest chain of matches lying pitch +/- band apart; a match closer than band
-    to the last kept one is dropped. Chains of one match are not kept."""
+    """Greedy runs over starts in order: skip a match closer than band to the
+    run's last kept match, extend on pitch +/- band, otherwise start a new run.
+    Return the run with the most matches (first on a tie); runs of one match
+    are not kept. Not a longest-chain search (see the module docstring)."""
     chains, cur = [], []
     for m in starts:
         if cur and m - cur[-1] < band:
