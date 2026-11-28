@@ -21,17 +21,19 @@ def u32(v):
     return struct.pack("<I", v)
 
 
-def note(header, sub_type=13, with_2050=False, v0611=14, at=0):
+def note(header, sub_type=13, with_2050=False, v0611=14, at=0, entry0611=None):
     """MakerNote: header, byte order, top IFD with 0x2040 (and 0x2050), then a
-    0x2040 IFD holding 0x0611 = v0611 only. Offsets are relative to the start
-    of the enclosing MakerNote; at is where this note starts inside it."""
+    0x2040 IFD holding 0x0611 = v0611 only (or the raw (type, count, field)
+    entry0611). Offsets are relative to the start of the enclosing MakerNote;
+    at is where this note starts inside it."""
     top_at = len(header) + 4
     n_top = 2 if with_2050 else 1
     sub_at = top_at + 2 + 12 * n_top + 4
     top = [(0x2040, sub_type, 1, u32(at + sub_at))]
     if with_2050:
         top.append((0x2050, 7, 4, b"abcd"))   # a byte block, not an IFD pointer
-    sub = ifd([(0x0611, 3, 1, struct.pack("<HH", v0611, 0))])
+    e = entry0611 or (3, 1, struct.pack("<HH", v0611, 0))
+    sub = ifd([(0x0611,) + tuple(e)])
     return header + b"II\x03\x00" + ifd(top) + sub
 
 
@@ -111,6 +113,20 @@ class MakerNoteTests(unittest.TestCase):
     def test_byte_block_0x2040_is_unsupported(self):
         r = measure(container([b"\x01"], maker=note(b"OLYMPUS\0", sub_type=7)))
         self.assertEqual(r["directories"]["2040"], "unsupported")
+        self.assertEqual(r["tags"]["2040/0611"], "unknown")
+
+    def test_present_unsupported_value_is_unknown_not_absent(self):
+        # 0x0611 present as RATIONAL; 0x0620 not in the directory.
+        r = measure(container([b"\x01"], maker=note(b"OM SYSTEM\0\0\0",
+                                                     entry0611=(5, 1, u32(0)))))
+        self.assertEqual(r["directories"]["2040"], "ok")
+        self.assertEqual(r["tags"]["2040/0611"], "unknown")
+        self.assertIsNone(r["tags"]["2040/0620"])
+
+    def test_present_unreadable_value_is_unknown(self):
+        # SHORT x 20 whose out-of-line pointer lies past the MakerNote end.
+        r = measure(container([b"\x01"], maker=note(b"OM SYSTEM\0\0\0",
+                                                     entry0611=(3, 20, u32(0xFFFF)))))
         self.assertEqual(r["tags"]["2040/0611"], "unknown")
 
     def test_leading_om_system_wins_over_embedded_olympus(self):

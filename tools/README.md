@@ -2030,7 +2030,9 @@ is the first embedded `OLYMPUS` header used, as before (`OLYMPUS embedded`).
 Unsupported and absent stay distinct: `makernote` is the layout or
 `none`/`unsupported`; each directory is `ok`, `absent` or `unsupported` (entry
 present but not an IFD pointer); a tag is null only when its directory was
-read, and `"unknown"` otherwise. Equal values do not establish tag meaning, a
+read and the tag is not in it. It is `"unknown"` when its directory was not
+read, or when the tag is present but its value is unsupported (not SHORT x 1..8,
+LONG x 1 or IFD x 1) or its bytes lie outside the MakerNote. Equal values do not establish tag meaning, a
 codec parameter or a cause.
 
     python -I -B tools/makernote_codec_tags.py FILE [FILE ...]

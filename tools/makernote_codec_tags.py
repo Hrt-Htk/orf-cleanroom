@@ -15,7 +15,9 @@ Absent and unknown stay distinct. "makernote" is the header layout read
 gives 0x2040 and 0x2050 as "ok", "absent" (no entry in the top IFD) or
 "unsupported" (entry present but not an IFD pointer, e.g. a byte block). A tag
 prints null only when its directory was read and the tag is not in it; it
-prints "unknown" when its directory was not read. Tag meanings, codec
+prints "unknown" when its directory was not read, or when the tag is present
+but its value is unsupported (not SHORT x 1..8, LONG x 1 or IFD x 1) or its
+bytes lie outside the MakerNote. Tag meanings, codec
 parameters and causes are not established by this output.
 
 One JSON line per input: SHA-256, payload dimensions, leading zero bits, tags.
@@ -40,13 +42,18 @@ TAGS = {0x2040: [0x0611, 0x0620] + list(range(0x0640, 0x064A)) + list(range(0x06
 
 
 def value(ifd, tag):
+    """None if the tag is not in the directory; "unknown" if it is present but
+    its type is not SHORT (up to 8), LONG or IFD (count 1), or its bytes lie
+    outside the MakerNote."""
     entry = ifd.get(tag)
-    if not entry or entry[3] is None:
+    if entry is None:
         return None
     v = entry[3]
+    if v is None or v == ():
+        return "unknown"
     if isinstance(v, tuple):
         return v[0] if len(v) == 1 else list(v)
-    return v if isinstance(v, int) else None
+    return v
 
 
 def makernote_tags(data):
