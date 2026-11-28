@@ -8,7 +8,9 @@ no image data.
 Payload: the declared strip sequence read by strip_start_audit.independent_strips
 (separated strips joined in table order without gap bytes; tied, overlapping or
 mismatched strip tables, other unsupported containers and files over 128 MiB
-give status=unknown with a reason, and the run continues).
+give status=unknown with a reason, and the run continues). The reason is the
+reader's message for a rejected container (e.g. overlapping_strips), the
+exception class name for any other container error, or file_over_128_MiB.
 
 Candidate grammar (#951, not established): a literal marker of leading zero
 bits and a 1, then words from start_bit, the bit after that 1. A word is q < 12
@@ -47,7 +49,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

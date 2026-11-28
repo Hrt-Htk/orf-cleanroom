@@ -2262,8 +2262,9 @@ of at least `--min-run` blocks, and the bits left after W*H words. `body_blocks`
 counts the complete blocks from block 2, which the histograms, runs and
 `first_block_off_reference` (null when all are 6W+12) cover. Status is `ok`,
 `no_marker` (empty or all-zero payload), `incomplete` (complete blocks reported)
-or `unknown` (unsupported container or file over 128 MiB, with the reason; the
-run continues). `--per-block` adds one record per block: block, start bit, bits,
+or `unknown` (unsupported container or file over 128 MiB; the reason is the
+reader's message, an exception class name, or `file_over_128_MiB`; the run
+continues). `--per-block` adds one record per block: block, start bit, bits,
 motif column, motif bit.
 
     python -I -B tools/motif_block_walk.py [--max-col N] [--min-run N] [--per-block] FILE [FILE ...]

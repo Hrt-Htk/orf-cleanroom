@@ -241,6 +241,27 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual((code, len(lines)), (0, 5))
         self.assertTrue(lines[1].startswith("[0, 4, "))
 
+    def test_file_over_the_size_cap_is_unknown_and_the_run_continues(self):
+        good = container([stream([block(W, 2)] * 4)], W, 4)
+        saved = mbw.MAX_BYTES
+        mbw.MAX_BYTES = len(good) - 1
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                big, small = os.path.join(d, "a"), os.path.join(d, "b")
+                with open(big, "wb") as f:
+                    f.write(good)
+                with open(small, "wb") as f:
+                    f.write(good[:len(good) - 1])
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    code = mbw.main([big, small])
+        finally:
+            mbw.MAX_BYTES = saved
+        lines = out.getvalue().splitlines()
+        self.assertEqual(code, 1)
+        self.assertIn('"reason": "file_over_128_MiB"', lines[0])
+        self.assertEqual(len(lines), 2)
+
     def test_entry_point_on_generated_files(self):
         with tempfile.TemporaryDirectory() as d:
             good, bad = os.path.join(d, "a"), os.path.join(d, "b")
